@@ -1,3 +1,4 @@
+import os
 #image processing
 from skimage.io import imread 
 from skimage.measure import (
@@ -35,7 +36,7 @@ class Experiment:
 
         ##optional constants passed to each data run. Tweak if there are issues.        
 
-        mask = .2, #threshold for mask filter
+        mask = .1, #threshold for mask filter
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
@@ -76,7 +77,7 @@ class Experiment:
             for i,val in enumerate(trials):
                 self.data.append(
                     DataRun(
-                        self.datapath + f"image_{self.idx_start+i}", 
+                        os.path.join(self.datapath,f"image_{self.idx_start+i}"), 
                         val, 
                         **self.args
                         )
@@ -110,7 +111,7 @@ class DataRun:
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
         value, #value of independent variable
-        mask = .2, #threshold for mask filter
+        mask = 0.1, #threshold for mask filter
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
@@ -177,7 +178,7 @@ class DataRun:
         props = regionprops(blobs) #generate a properties dictionary
 
         if not len(props) == 1:
-            raise Exception()
+            raise Exception('BLOB DETECTION ERROR')
         self.cy, self.cx = props[0].centroid
         
         self.blob = self.od_arr[
@@ -219,12 +220,18 @@ class DataRun:
         abs_CS=3*(766.5e-9)**2/(2*np.pi)
         pixel_area=(6.45e-6/3)**2
         #the division by 3 accounts for magnification
+        
+        #noise cancellation: set the constant B in the gaussian fit to be 0
+        x_param=self.popt_x
+        x_param[3]=0
+        y_param=self.popt_y
+        y_param[3]=0
         return pixel_area/abs_CS*np.trapz(
-            self.gaussian_fit(x, *self.popt_x),
+            self.gaussian_fit(x, *x_param),
             x
         ) *\
         np.trapz(
-            self.gaussian_fit(x, *self.popt_y),
+            self.gaussian_fit(x, *y_param),
             x
         )
 
