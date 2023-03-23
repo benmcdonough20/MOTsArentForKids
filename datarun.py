@@ -223,9 +223,8 @@ class DataRun:
         self.y = y
 
     def atom_number(self):
-        x = np.linspace(-1000, 1000, 10000)
+        x = np.arange(-3*self.popt_x[2], 3*self.popt_x[2], self.DISTANCE_SCALE/2)
         abs_CS=(766.5e-9)**2/(2*np.pi)
-        #the division by 3 accounts for magnification
 
         return 1/abs_CS*np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
