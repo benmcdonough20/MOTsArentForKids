@@ -218,6 +218,7 @@ class DataRun:
         x = np.linspace(-1000, 1000, 10000)
         abs_CS=3*(766.5e-9)**2/(2*np.pi)
         pixel_area=(6.45e-6/3)**2
+        #the division by 3 accounts for magnification
         return pixel_area/abs_CS*np.trapz(
             self.gaussian_fit(x, *self.popt_x),
             x
