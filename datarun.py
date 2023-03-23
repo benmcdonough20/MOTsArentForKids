@@ -216,8 +216,9 @@ class DataRun:
 
     def atom_number(self):
         x = np.linspace(-1000, 1000, 10000)
-
-        return np.trapz(
+        abs_CS=3*(766.5e-9)**2/(2*np.pi)
+        pixel_area=(6.45e-6/3)**2
+        return pixel_area/abs_CS*np.trapz(
             self.gaussian_fit(x, *self.popt_x),
             x
         ) *\
