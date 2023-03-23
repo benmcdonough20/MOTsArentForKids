@@ -1,3 +1,4 @@
+import os
 #image processing
 from skimage.io import imread 
 from skimage.measure import (
@@ -76,7 +77,7 @@ class Experiment:
             for i,val in enumerate(trials):
                 self.data.append(
                     DataRun(
-                        self.datapath + f"image_{self.idx_start+i}", 
+                        os.path.join(self.datapath,f"image_{self.idx_start+i}"), 
                         val, 
                         **self.args
                         )
@@ -110,7 +111,7 @@ class DataRun:
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
         value, #value of independent variable
-        mask = .2, #threshold for mask filter
+        mask = 0.1, #threshold for mask filter
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
