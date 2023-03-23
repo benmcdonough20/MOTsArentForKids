@@ -185,8 +185,8 @@ class DataRun:
             round(self.cx-self.blob_dim/2):round(self.cx+self.blob_dim/2)
         ]
 
-    def gaussian_fit(self, x, A, mu, sigma):
-        return A*np.exp(-(x-mu)**2/(2*sigma**2))
+    def gaussian_fit(self, x, A, mu, sigma, B):
+        return A*np.exp(-(x-mu)**2/(2*sigma**2))+B
     
     def fit(self):
         #compute marginals and fit to a gaussian
@@ -201,14 +201,14 @@ class DataRun:
             self.gaussian_fit, 
             np.arange(len(x)), 
             x, 
-            p0 =[350, 150, 60]
+            p0 =[350, 150, 60, 0]
         )
 
         self.popt_y, self.pcov_y = curve_fit(
             self.gaussian_fit, 
             np.arange(len(y)), 
             y, 
-            [350,150, 60]
+            [350,150, 60, 0]
         )
 
         self.x = x
