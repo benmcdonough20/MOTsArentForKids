@@ -84,7 +84,7 @@ class Experiment:
                 )
                 bar() #update progress bar
     
-    def structure_data(self, func = None):
+    def structure_data(self, func = None, remove_outliers = False):
         """Generates a dictionary where keys are independent variable values and the values
         are data collected from each run.
 
@@ -107,6 +107,8 @@ class DataRun:
     """Collects data from a set of four images, isolates MOT and fits marginals to Gaussian
     """
 
+    DISTANCE_SCALE = 6.45e-6*.33
+
     def __init__(
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
@@ -127,6 +129,7 @@ class DataRun:
         self.circle = circle
         self.avg_area = avg_area
 
+        self.xaxis, self.yaxis = [],[]
         self.od_arr = self.load() #load array of od values
         self.find_blob() #isolate blob
         self.fit() #fit marginals
@@ -186,6 +189,10 @@ class DataRun:
             round(self.cx-self.blob_dim/2):round(self.cx+self.blob_dim/2)
         ]
 
+        self.yaxis = np.arange(len(self.blob))*self.DISTANCE_SCALE
+        self.xaxis = np.arange(len(self.blob[0]))*self.DISTANCE_SCALE
+
+
     def gaussian_fit(self, x, A, mu, sigma, B):
         return A*np.exp(-(x-mu)**2/(2*sigma**2))+B
     
@@ -200,16 +207,16 @@ class DataRun:
 
         self.popt_x, self.pcov_x = curve_fit(
             self.gaussian_fit, 
-            np.arange(len(x)), 
+            self.xaxis, 
             x, 
-            p0 =[350, 150, 60, 0]
+            p0 =[350, 3.2e-4, 1.3e-4, 0]
         )
 
         self.popt_y, self.pcov_y = curve_fit(
             self.gaussian_fit, 
-            np.arange(len(y)), 
+            self.yaxis,
             y, 
-            [350,150, 60, 0]
+            [350,3.2e-4, 1.3e-4, 0]
         )
 
         self.x = x
@@ -217,15 +224,15 @@ class DataRun:
 
     def atom_number(self):
         x = np.linspace(-1000, 1000, 10000)
-        abs_CS=3*(766.5e-9)**2/(2*np.pi)
-        pixel_area=(6.45e-6/3)**2
+        abs_CS=(766.5e-9)**2/(2*np.pi)
         #the division by 3 accounts for magnification
-        return pixel_area/abs_CS*np.trapz(
-            self.gaussian_fit(x, *self.popt_x),
+
+        return 1/abs_CS*np.trapz(
+            self.gaussian_fit(x, *self.popt_x[:3], 0),
             x
         ) *\
         np.trapz(
-            self.gaussian_fit(x, *self.popt_y),
+            self.gaussian_fit(x, *self.popt_y[:3], 0),
             x
         )
 
@@ -257,6 +264,7 @@ class DataRun:
         ax.add_artist(rect1)
         ax.add_artist(rect2)
         im = ax.imshow(self.od_arr)
+        
         fig.colorbar(im)
 
     def plot_fit(self):
@@ -272,25 +280,27 @@ class DataRun:
         )
         ax = fig.add_subplot(gs[1,0])
 
-        ax.imshow(self.blob)
+        ax.imshow(self.blob, extent = (0, max(self.xaxis), 0, max(self.yaxis)))
 
         ax_x = fig.add_subplot(gs[0,0], sharex=ax)
         ax_y = fig.add_subplot(gs[1,1], sharey=ax)
 
-        xaxis = np.arange(len(self.x))
-        ax_x.plot(self.x)
+        ax_x.plot(self.xaxis, self.x)
         ax_x.plot(
-            xaxis,
-            self.gaussian_fit(xaxis,*self.popt_x)
+            self.xaxis,
+            self.gaussian_fit(self.xaxis, *self.popt_x)
         )
+        ax_x.set_ylabel("OD [arb. U]")
+        plt.setp(ax_x.get_xticklabels(), visible = False)
 
         #flip the axes for y
-        yaxis = np.arange(len(self.y))
-        ax_y.plot(self.y, yaxis) 
+        ax_y.plot(self.y, self.yaxis) 
         ax_y.plot(
-            self.gaussian_fit(yaxis, *self.popt_y),
-            yaxis
+            self.gaussian_fit(self.yaxis, *self.popt_y),
+            self.yaxis
         )
+        ax_y.set_xlabel("OD [arb. U]")
+        plt.setp(ax_y.get_yticklabels(), visible = False)
 
         ax.errorbar(
             self.popt_x[1], 
@@ -301,3 +311,12 @@ class DataRun:
             marker = "x", 
             capsize = 10
         )
+
+        def tick_format(val, num):
+            return "{:.2f}".format(val * 1e3)
+
+        ax.xaxis.set_major_formatter(tick_format)
+        ax.yaxis.set_major_formatter(tick_format)
+
+        ax.set_xlabel(r"$x \ [mm]$")
+        ax.set_ylabel(r"$y \ [mm]$")
