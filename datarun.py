@@ -96,9 +96,9 @@ class Experiment:
 
         for datum in self.data:
             if func:
-                structured_data[datum.value] = func(datum)
+                structured_data[datum.value].append(func(datum))
             else:
-                structured_data[datum.value] = datum
+                structured_data[datum.value].append(datum)
 
         return structured_data
 
