@@ -268,11 +268,13 @@ class DataRun:
         im = ax.imshow(self.od_arr)
         
         fig.colorbar(im)
+        fig.set_dpi(200)
 
     def plot_fit(self):
 
         fig = plt.figure(
-            figsize=(6,6)
+            figsize=(6,6),
+            dpi = 200
         )
         gs = fig.add_gridspec(
             2, 2,  
@@ -287,21 +289,23 @@ class DataRun:
         ax_x = fig.add_subplot(gs[0,0], sharex=ax)
         ax_y = fig.add_subplot(gs[1,1], sharey=ax)
 
-        ax_x.plot(self.xaxis, self.x)
+        ax_x.plot(self.xaxis, self.x, color="r")
         ax_x.plot(
             self.xaxis,
-            self.gaussian_fit(self.xaxis, *self.popt_x)
+            self.gaussian_fit(self.xaxis, *self.popt_x),
+            color = "b"
         )
-        ax_x.set_ylabel("OD [arb. U]")
+        ax_x.set_ylabel("OD (dim.)")
         plt.setp(ax_x.get_xticklabels(), visible = False)
 
         #flip the axes for y
-        ax_y.plot(self.y, self.yaxis) 
+        ax_y.plot(self.y, self.yaxis, color = "r") 
         ax_y.plot(
             self.gaussian_fit(self.yaxis, *self.popt_y),
-            self.yaxis
+            self.yaxis,
+            color = "b"
         )
-        ax_y.set_xlabel("OD [arb. U]")
+        ax_y.set_xlabel("OD (dim.)")
         plt.setp(ax_y.get_yticklabels(), visible = False)
 
         ax.errorbar(
@@ -309,7 +313,7 @@ class DataRun:
             self.popt_y[1], 
             xerr = np.abs(self.popt_x[2]), 
             yerr = np.abs(self.popt_y[2]), 
-            color = 'r', 
+            color = "r", 
             marker = "x", 
             capsize = 10
         )
@@ -320,5 +324,5 @@ class DataRun:
         ax.xaxis.set_major_formatter(tick_format)
         ax.yaxis.set_major_formatter(tick_format)
 
-        ax.set_xlabel(r"$x \ [mm]$")
-        ax.set_ylabel(r"$y \ [mm]$")
+        ax.set_xlabel(r"$x \ (mm)$")
+        ax.set_ylabel(r"$y \ (mm)$")
