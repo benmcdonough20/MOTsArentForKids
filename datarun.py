@@ -234,9 +234,13 @@ class DataRun:
             self.gaussian_fit(x, *self.popt_y[:3], 0),
             x
         )
-    def atom_number_px_sum(self):
+    def atom_number_px_sum_noise_cancelled(self):
         abs_CS=(766.5e-9)**2/(2*np.pi)
-        return np.sum(self.blob)-0.5*(self.popt_x[3]+self.popt_y[3])*self.DISTANCE_SCALE**2/abs_CS
+        return np.sum(self.blob-0.5*(self.popt_x[3]+self.popt_y[3]))*self.DISTANCE_SCALE**2/abs_CS
+    
+    def atom_number_px_sum(self):
+        abs_CS=3*(766.5e-9)**2/(2*np.pi)
+        return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS
         
     def plot_blob(self):
         fig, ax = plt.subplots()
