@@ -36,7 +36,7 @@ class Experiment:
 
         ##optional constants passed to each data run. Tweak if there are issues.        
 
-        mask = .2, #threshold for mask filter
+        mask = .1, #threshold for mask filter
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
@@ -107,7 +107,7 @@ class DataRun:
     """Collects data from a set of four images, isolates MOT and fits marginals to Gaussian
     """
 
-    DISTANCE_SCALE = 6.45e-6*.33
+    DISTANCE_SCALE = 6.45e-6/3
 
     def __init__(
         self, 
@@ -234,7 +234,10 @@ class DataRun:
             self.gaussian_fit(x, *self.popt_y[:3], 0),
             x
         )
-
+    def atom_number_px_sum(self):
+        abs_CS=(766.5e-9)**2/(2*np.pi)
+        return np.sum(self.blob)-0.5*(self.popt_x[3]+self.popt_y[3])*self.DISTANCE_SCALE**2/abs_CS
+        
     def plot_blob(self):
         fig, ax = plt.subplots()
 
