@@ -113,7 +113,7 @@ class DataRun:
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
         value, #value of independent variable
-        mask = .15,
+        mask = .25,
         blob_dim = 300, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
@@ -136,11 +136,17 @@ class DataRun:
 
     def incircle(self, center, radius, pt):
             return (pt[0]-center[0])**2 + (pt[1]-center[1])**2 < radius**2
-
+    
+    def circle_mask(self, arr):
+        center,rad =self.circle
+        Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
+        dist_from_center = np.sqrt((X - center[1])**2 + (Y-center[0])**2)
+        return dist_from_center <= rad
+    
     def images(self):
         images =  [imread(self.im_path + f"_{i}.tif") for i in range(4)]
         im0, im1, im0_background, im1_background = images
-
+        
         I0_arr = np.subtract(np.array(im0), np.array(im0_background)).astype(int)
         I_arr = np.subtract(np.array(im1), np.array(im1_background)).astype(int)
 
@@ -149,13 +155,9 @@ class DataRun:
     def load(self):
         I_arr, I0_arr = self.images()
         od_arr = np.log(np.divide(I_arr, I0_arr))
-
+        mask=self.circle_mask(od_arr)
         #first pass, just clip anything not within the aperture
-        for i,row in enumerate(od_arr):
-            for j, pixel in enumerate(row):
-                if pixel < 0 or not self.incircle(*self.circle,(i,j)):
-                    od_arr[i][j] = 0
-
+        od_arr[~mask] = 0
         #cut off the sides
         center, rad = self.circle
         od_arr = od_arr[
@@ -167,6 +169,7 @@ class DataRun:
             self.avg_area[1]:self.avg_area[3],
             self.avg_area[0]:self.avg_area[2]
         ]
+        
         od_arr = od_arr - np.mean(avg_rect)
         
         od_arr = median_filter(od_arr, self.box)
