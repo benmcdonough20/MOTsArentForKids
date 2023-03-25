@@ -36,12 +36,12 @@ class Experiment:
 
         ##optional constants passed to each data run. Tweak if there are issues.        
 
-        mask = .1, #threshold for mask filter
+        mask = .25,
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
-        circle = [(530, 690), 250], #center/radius of viewport circle
-        avg_area = (200, 75, 300, 125) #area for capturing background noise
+        circle = [(530, 675), 250], #center/radius of viewport circle
+        avg_area = (200, 75, 300, 125), #area for capturing background noise
     ):
 
         self.numtrials = numtrials
@@ -113,12 +113,12 @@ class DataRun:
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
         value, #value of independent variable
-        mask = 0.1, #threshold for mask filter
-        blob_dim = 250, #size of blob box to fit
+        mask = .15,
+        blob_dim = 300, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
-        circle = [(530, 690), 250], #center/radius of viewport circle
-        avg_area = (200, 75, 300, 125) #area for capturing background noise
+        circle = [(530, 675), 300], #center/radius of viewport circle
+        avg_area = (200, 100, 300, 200), #area for capturing background noise
     ):
         self.value = value
         self.im_path = im_path
@@ -181,7 +181,7 @@ class DataRun:
         props = regionprops(blobs) #generate a properties dictionary
 
         if not len(props) == 1:
-            raise Exception()
+            raise Exception(f"Found {len(props)} blobs")
         self.cy, self.cx = props[0].centroid
         
         self.blob = self.od_arr[
@@ -194,7 +194,7 @@ class DataRun:
 
 
     def gaussian_fit(self, x, A, mu, sigma, B):
-        return A*np.exp(-(x-mu)**2/(2*sigma**2))+B
+        return A*np.exp(-(x-mu)**2/(2*sigma**2)) + B
     
     def fit(self):
         #compute marginals and fit to a gaussian
@@ -223,25 +223,24 @@ class DataRun:
         self.y = y
 
     def atom_number(self):
-        x = np.arange(-3*self.popt_x[2], 3*self.popt_x[2], self.DISTANCE_SCALE/2)
-        abs_CS=(766.5e-9)**2/(2*np.pi)
+        x = np.arange(-10*self.popt_x[2], 10*self.popt_x[2], self.DISTANCE_SCALE/20)
 
-        return 1/abs_CS*np.trapz(
+        abs_CS = 2.46-15 #number found by comparison with sample data... About two orders
+        #of magnitude smaller
+
+        return np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
             x
-        ) *\
-        np.trapz(
-            self.gaussian_fit(x, *self.popt_y[:3], 0),
-            x
-        )
+        )*self.DISTANCE_SCALE/2.46e-15
+
     def atom_number_px_sum_noise_cancelled(self):
         abs_CS=(766.5e-9)**2/(2*np.pi)
         return np.sum(self.blob-0.5*(self.popt_x[3]+self.popt_y[3]))*self.DISTANCE_SCALE**2/abs_CS
     
     def atom_number_px_sum(self):
         abs_CS=3*(766.5e-9)**2/(2*np.pi)
-        return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS
-        
+        return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS 
+    
     def plot_blob(self):
         fig, ax = plt.subplots()
 
