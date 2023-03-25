@@ -75,13 +75,15 @@ class Experiment:
 
         with alive_bar(len(trials), force_tty=True) as bar: #progress bar
             for i,val in enumerate(trials):
-                self.data.append(
-                    DataRun(
+                try:
+                    new_dat = DataRun(
                         os.path.join(self.datapath,f"image_{self.idx_start+i}"), 
                         val, 
                         **self.args
-                        )
-                )
+                    )
+                    self.data.append(new_dat)
+                except:
+                    pass
                 bar() #update progress bar
     
     def structure_data(self, func = None, remove_outliers = False):
@@ -185,10 +187,11 @@ class DataRun:
 
         if not len(props) == 1:
             raise Exception(f"Found {len(props)} blobs")
+
         self.cy, self.cx = props[0].centroid
         
         self.blob = self.od_arr[
-            round(self.cy-self.blob_dim/2):round(self.cy+self.blob_dim/2), 
+             round(self.cy-self.blob_dim/2):round(self.cy+self.blob_dim/2), 
             round(self.cx-self.blob_dim/2):round(self.cx+self.blob_dim/2)
         ]
 
@@ -203,7 +206,7 @@ class DataRun:
         #compute marginals and fit to a gaussian
         y, x = margins(self.blob)
         x = x[0]
-        y = y.T[0]
+        y = list(reversed(y.T[0]))
 
         x[x == np.inf] = 0
         y[y == np.inf] = 0
