@@ -82,8 +82,8 @@ class Experiment:
                         **self.args
                     )
                     self.data.append(new_dat)
-                except:
-                    pass
+                except Exception as ex:
+                    print(ex)
                 bar() #update progress bar
     
     def structure_data(self, func = None, remove_outliers = False):
@@ -120,7 +120,7 @@ class DataRun:
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
         circle = [(530, 675), 300], #center/radius of viewport circle
-        avg_area = (200, 100, 300, 200), #area for capturing background noise
+        avg_area = (200,75,300,125)
     ):
         self.value = value
         self.im_path = im_path
