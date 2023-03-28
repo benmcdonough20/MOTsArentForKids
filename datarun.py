@@ -109,7 +109,7 @@ class DataRun:
     """Collects data from a set of four images, isolates MOT and fits marginals to Gaussian
     """
 
-    DISTANCE_SCALE = 6.45e-6/3
+    DISTANCE_SCALE = 6.45e-6*3
 
     def __init__(
         self, 
@@ -215,14 +215,14 @@ class DataRun:
             self.gaussian_fit, 
             self.xaxis, 
             x, 
-            p0 =[350, 3.2e-4, 1.3e-4, 0]
+            p0 =[350, .00288, .00117, 0]
         )
 
         self.popt_y, self.pcov_y = curve_fit(
             self.gaussian_fit, 
             self.yaxis,
             y, 
-            [350,3.2e-4, 1.3e-4, 0]
+            p0 =[350, .00288, .00117, 0]
         )
 
         self.x = x
@@ -231,7 +231,7 @@ class DataRun:
     def atom_number(self):
         x = np.arange(-10*self.popt_x[2], 10*self.popt_x[2], self.DISTANCE_SCALE/20)
 
-        abs_CS = 2.46-15 #number found by comparison with sample data... About two orders
+        abs_CS = (766.5e-9)**2/(2*np.pi)
         #of magnitude smaller
 
         return np.trapz(
