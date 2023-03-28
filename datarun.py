@@ -13,6 +13,7 @@ from matplotlib.pyplot import Rectangle
 from scipy.optimize import curve_fit
 from scipy.stats.contingency import margins #compute marginals
 from alive_progress import alive_bar #progress bar
+from scipy.stats import moment
 
 #ignore divide warnings
 import warnings
@@ -82,8 +83,8 @@ class Experiment:
                         **self.args
                     )
                     self.data.append(new_dat)
-                except Exception as ex:
-                    print(ex)
+                except:
+                    pass
                 bar() #update progress bar
     
     def structure_data(self, func = None, remove_outliers = False):
@@ -120,7 +121,7 @@ class DataRun:
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
         circle = [(530, 675), 300], #center/radius of viewport circle
-        avg_area = (200,75,300,125)
+        avg_area = (200, 100, 300, 200), #area for capturing background noise
     ):
         self.value = value
         self.im_path = im_path
@@ -134,7 +135,8 @@ class DataRun:
         self.xaxis, self.yaxis = [],[]
         self.od_arr = self.load() #load array of od values
         self.find_blob() #isolate blob
-        self.fit() #fit marginals
+        self.moments()
+        # self.fit() #fit marginals
 
     def incircle(self, center, radius, pt):
             return (pt[0]-center[0])**2 + (pt[1]-center[1])**2 < radius**2
@@ -160,6 +162,7 @@ class DataRun:
         mask=self.circle_mask(od_arr)
         #first pass, just clip anything not within the aperture
         od_arr[~mask] = 0
+        # od_arr=np.maximum(od_arr,0)
         #cut off the sides
         center, rad = self.circle
         od_arr = od_arr[
@@ -171,11 +174,8 @@ class DataRun:
             self.avg_area[1]:self.avg_area[3],
             self.avg_area[0]:self.avg_area[2]
         ]
-        
         od_arr = od_arr - np.mean(avg_rect)
-        
         od_arr = median_filter(od_arr, self.box)
-
         return od_arr
 
     def find_blob(self):
@@ -191,16 +191,20 @@ class DataRun:
         self.cy, self.cx = props[0].centroid
         
         self.blob = self.od_arr[
-             round(self.cy-self.blob_dim/2):round(self.cy+self.blob_dim/2), 
+            round(self.cy-self.blob_dim/2):round(self.cy+self.blob_dim/2), 
             round(self.cx-self.blob_dim/2):round(self.cx+self.blob_dim/2)
         ]
 
         self.yaxis = np.arange(len(self.blob))*self.DISTANCE_SCALE
         self.xaxis = np.arange(len(self.blob[0]))*self.DISTANCE_SCALE
 
+    def moments(self):
+        self.sigma_x_sq=np.var(np.sum(self.blob,axis=0))
+        self.sigma_y_sq=np.var(np.sum(self.blob,axis=1))
+        return
 
     def gaussian_fit(self, x, A, mu, sigma, B):
-        return A*np.exp(-(x-mu)**2/(2*sigma**2)) + B
+        return A*np.exp(-(x-mu)**2/(2*sigma**2))+B
     
     def fit(self):
         #compute marginals and fit to a gaussian
@@ -233,11 +237,11 @@ class DataRun:
 
         abs_CS = (766.5e-9)**2/(2*np.pi)
         #of magnitude smaller
-
+        abs_CS=3*(766.5e-9)**2/(2*np.pi)
         return np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
             x
-        )*self.DISTANCE_SCALE/2.46e-15
+        )*self.DISTANCE_SCALE/abs_CS
 
     def atom_number_px_sum_noise_cancelled(self):
         abs_CS=(766.5e-9)**2/(2*np.pi)
