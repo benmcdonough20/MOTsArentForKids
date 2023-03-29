@@ -136,7 +136,7 @@ class DataRun:
         self.od_arr = self.load() #load array of od values
         self.find_blob() #isolate blob
         self.moments()
-        # self.fit() #fit marginals
+        self.fit() #fit marginals
 
     def incircle(self, center, radius, pt):
             return (pt[0]-center[0])**2 + (pt[1]-center[1])**2 < radius**2
