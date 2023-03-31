@@ -28,15 +28,15 @@ class Experiment:
 
     def __init__(
         self, 
-        vstart, #ind. variable initial value
-        vend, #ind. variable final value
-        vstep, #ind. variable increment
         idx_start, #starting image index
         datapath, #(string) path to folder containing images
         numtrials, #number of repeats
 
-        ##optional constants passed to each data run. Tweak if there are issues.        
-
+        ##optional constants passed to each data run. Tweak if there are issues.
+        vstart=None, #ind. variable initial value
+        vend=None, #ind. variable final value
+        vstep=None, #ind. variable increment       
+        vlist = None,
         mask = .25,
         blob_dim = 250, #size of blob box to fit
         box = 3, #size of box for image median filter
@@ -44,7 +44,7 @@ class Experiment:
         circle = [(530, 675), 250], #center/radius of viewport circle
         avg_area = (200, 75, 300, 125), #area for capturing background noise
     ):
-
+        self.vlist=vlist
         self.numtrials = numtrials
         self.idx_start = idx_start
         self.datapath = datapath
@@ -57,15 +57,18 @@ class Experiment:
             "circle" : circle,
             "avg_area" : avg_area
         }
-
-        self.vlist = [ #list of ind. variable values between initial and final
-            vstart+i*vstep 
-            for i in range(
-                round(
-                    (vend-vstart)/vstep+1
-                    )
-                )
-        ]
+        if self.vlist==None:
+            try:
+                self.vlist = [ #list of ind. variable values between initial and final
+                    vstart+i*vstep 
+                    for i in range(
+                        round(
+                            (vend-vstart)/vstep+1
+                            )
+                        )
+                ]
+            except:
+                print('One of vstart, vstop, vstep is None, or vlist is None.')
 
         self.data = [] #data runs are stored here
         self.run() #run experiment
@@ -199,12 +202,8 @@ class DataRun:
         self.xaxis = np.arange(len(self.blob[0]))*self.DISTANCE_SCALE
 
     def moments(self):
-        total_OD=np.sum(self.blob)
-        x_summed=np.sum(self.blob,axis=0)
-        x_arr=np.arange(0*self.DISTANCE_SCALE,len(x_summed)*self.DISTANCE_SCALE,self.DISTANCE_SCALE)
-        meanx=np.sum(np.multiply(x_arr,x_summed))/total_OD
-        meansqx=np.sum(np.multiply(np.square(x_arr),x_summed))/total_OD
-        self.sigma_x_sq=meansqx-meanx**2
+        self.sigma_x_sq=np.var(np.sum(self.blob,axis=0))
+        self.sigma_y_sq=np.var(np.sum(self.blob,axis=1))
         return
 
     def gaussian_fit(self, x, A, mu, sigma, B):
