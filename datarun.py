@@ -202,8 +202,12 @@ class DataRun:
         self.xaxis = np.arange(len(self.blob[0]))*self.DISTANCE_SCALE
 
     def moments(self):
-        self.sigma_x_sq=np.var(np.sum(self.blob,axis=0))
-        self.sigma_y_sq=np.var(np.sum(self.blob,axis=1))
+        total_OD=np.sum(self.blob)
+        x_summed=np.sum(self.blob,axis=0)
+        x_arr=np.arange(0*self.DISTANCE_SCALE,len(x_summed)*self.DISTANCE_SCALE,self.DISTANCE_SCALE)
+        meanx=np.sum(np.multiply(x_arr,x_summed))/total_OD
+        meansqx=np.sum(np.multiply(np.square(x_arr),x_summed))/total_OD
+        self.sigma_x_sq=meansqx-meanx**2
         return
 
     def gaussian_fit(self, x, A, mu, sigma, B):
