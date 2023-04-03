@@ -1,2 +1,5 @@
 *.pickle
 data/
+__pycache__/
+.ipynb_checkpoints/
+*.blend1

@@ -20,6 +20,8 @@ import warnings
 warnings.filterwarnings("ignore", message="divide by zero encountered in divide")
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 warnings.filterwarnings("ignore", message="divide by zero encountered in log")
+warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
 
 class Experiment:
     """
@@ -86,11 +88,11 @@ class Experiment:
                         **self.args
                     )
                     self.data.append(new_dat)
-                except:
-                    pass
+                except Exception as ex:
+                    print(ex)
                 bar() #update progress bar
     
-    def structure_data(self, func = None, remove_outliers = False):
+    def structure_data(self, func = None):
         """Generates a dictionary where keys are independent variable values and the values
         are data collected from each run.
 
