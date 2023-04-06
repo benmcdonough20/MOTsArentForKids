@@ -246,7 +246,6 @@ class DataRun:
 
         abs_CS = (766.5e-9)**2/(2*np.pi)
         #of magnitude smaller
-        abs_CS=3*(766.5e-9)**2/(2*np.pi)
         return np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
             x
