@@ -86,9 +86,8 @@ class Experiment:
                         **self.args
                     )
                     self.data.append(new_dat)
-                except:
-                    print(f'skip image {self.idx_start+i}')
-                    pass
+                except Exception as ex:
+                    print(ex)
                 bar() #update progress bar
     
     def structure_data(self, func = None, remove_outliers = False):
@@ -203,8 +202,8 @@ class DataRun:
             round(self.cx-self.blob_dim/2):round(self.cx+self.blob_dim/2)
         ]
 
-    def gaussian_fit(self, x, A, mu, sigma):
-        return A*np.exp(-(x-mu)**2/(2*sigma**2))
+    def gaussian_fit(self, x, A, mu, sigma, B):
+        return A*np.exp(-(x-mu)**2/(2*sigma**2)) + B
     
     def fit(self):
         #compute marginals and fit to a gaussian
@@ -219,14 +218,14 @@ class DataRun:
             self.gaussian_fit, 
             np.arange(len(x)), 
             x, 
-            p0 =[350, 150, 60]
+            p0 =[350, 150, 60, 0]
         )
 
         self.popt_y, self.pcov_y = curve_fit(
             self.gaussian_fit, 
             np.arange(len(y)), 
             y, 
-            [350,150, 60]
+            [350,150, 60, 0]
         )
 
         self.x = x
@@ -248,6 +247,7 @@ class DataRun:
     def atom_number_px_sum(self):
         abs_CS=3*(766.5e-9)**2/(2*np.pi)
         return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS 
+        
     def plot_blob(self):
         fig, ax = plt.subplots()
 

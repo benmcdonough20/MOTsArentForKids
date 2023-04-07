@@ -20,6 +20,8 @@ import warnings
 warnings.filterwarnings("ignore", message="divide by zero encountered in divide")
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 warnings.filterwarnings("ignore", message="divide by zero encountered in log")
+warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
 
 class Experiment:
     """
@@ -90,7 +92,7 @@ class Experiment:
                     print(ex)
                 bar() #update progress bar
     
-    def structure_data(self, func = None, remove_outliers = False):
+    def structure_data(self, func = None):
         """Generates a dictionary where keys are independent variable values and the values
         are data collected from each run.
 
@@ -119,12 +121,12 @@ class DataRun:
         self, 
         im_path, #path to image without trailing number, e.g ./data_dir/image_123
         value, #value of independent variable
-        mask = .2, #threshold for mask filter
-        blob_dim = 250, #size of blob box to fit
+        mask = .25,
+        blob_dim = 300, #size of blob box to fit
         box = 3, #size of box for image median filter
         mask_box = 50, #size of box for image mask
-        circle = [(530, 690), 250], #center/radius of viewport circle
-        avg_area = (200, 75, 300, 125) #area for capturing background noise
+        circle = [(530, 675), 300], #center/radius of viewport circle
+        avg_area = (200, 100, 300, 200), #area for capturing background noise
     ):
         self.value = value
         self.im_path = im_path
@@ -138,6 +140,7 @@ class DataRun:
         self.xaxis, self.yaxis = [],[]
         self.od_arr = self.load() #load array of od values
         self.find_blob() #isolate blob
+        self.moments()
         self.fit() #fit marginals
 
     def incircle(self, center, radius, pt):
@@ -147,12 +150,12 @@ class DataRun:
         center,rad =self.circle
         Y, X = np.ogrid[:arr.shape[0], :arr.shape[1]]
         dist_from_center = np.sqrt((X - center[1])**2 + (Y-center[0])**2)
-        return dist_from_center < rad
+        return dist_from_center <= rad
     
     def images(self):
         images =  [imread(self.im_path + f"_{i}.tif") for i in range(4)]
         im0, im1, im0_background, im1_background = images
-
+        
         I0_arr = np.subtract(np.array(im0), np.array(im0_background)).astype(int)
         I_arr = np.subtract(np.array(im1), np.array(im1_background)).astype(int)
 
@@ -164,8 +167,7 @@ class DataRun:
         mask=self.circle_mask(od_arr)
         #first pass, just clip anything not within the aperture
         od_arr[~mask] = 0
-        od_arr=np.maximum(od_arr,0)
-
+        # od_arr=np.maximum(od_arr,0)
         #cut off the sides
         center, rad = self.circle
         od_arr = od_arr[
@@ -178,9 +180,7 @@ class DataRun:
             self.avg_area[0]:self.avg_area[2]
         ]
         od_arr = od_arr - np.mean(avg_rect)
-        
         od_arr = median_filter(od_arr, self.box)
-
         return od_arr
 
     def find_blob(self):
@@ -189,8 +189,10 @@ class DataRun:
 
         blobs = label(self.mask_filtered)
         props = regionprops(blobs) #generate a properties dictionary
+
         if not len(props) == 1:
-            raise Exception()
+            raise Exception(f"Found {len(props)} blobs")
+
         self.cy, self.cx = props[0].centroid
         
         self.blob = self.od_arr[
@@ -201,30 +203,39 @@ class DataRun:
         self.yaxis = np.arange(len(self.blob))*self.DISTANCE_SCALE
         self.xaxis = np.arange(len(self.blob[0]))*self.DISTANCE_SCALE
 
-    def gaussian_fit(self, x, A, mu, sigma):
+    def moments(self):
+        total_OD=np.sum(self.blob)
+        x_summed=np.sum(self.blob,axis=0)
+        x_arr=np.arange(0*self.DISTANCE_SCALE,len(x_summed)*self.DISTANCE_SCALE,self.DISTANCE_SCALE)
+        meanx=np.sum(np.multiply(x_arr,x_summed))/total_OD
+        meansqx=np.sum(np.multiply(np.square(x_arr),x_summed))/total_OD
+        self.sigma_x_sq=meansqx-meanx**2
+        return
+
+    def gaussian_fit(self, x, A, mu, sigma, B):
         return A*np.exp(-(x-mu)**2/(2*sigma**2))
     
     def fit(self):
         #compute marginals and fit to a gaussian
         y, x = margins(self.blob)
         x = x[0]
-        y = y.T[0]
+        y = list(reversed(y.T[0]))
 
         x[x == np.inf] = 0
         y[y == np.inf] = 0
 
         self.popt_x, self.pcov_x = curve_fit(
             self.gaussian_fit, 
-            self.xaxis,
+            self.xaxis, 
             x, 
-            p0 = [350, .00288, .00117]
+            p0 =[350, .00288, .00117, 0]
         )
 
         self.popt_y, self.pcov_y = curve_fit(
             self.gaussian_fit, 
             self.yaxis,
             y, 
-            [350, .00288, .00117]
+            p0 =[350, .00288, .00117, 0]
         )
 
         self.x = x
@@ -233,17 +244,22 @@ class DataRun:
     def atom_number(self):
         x = np.arange(-10*self.popt_x[2], 10*self.popt_x[2], self.DISTANCE_SCALE/20)
 
-        abs_CS = 3*(766.5e-9)**2/(2*np.pi)
+        abs_CS = (766.5e-9)**2/(2*np.pi)
         #of magnitude smaller
         return np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
             x
         )*self.DISTANCE_SCALE/abs_CS
+        #return self.popt_x[0]*np.sqrt(2*np.pi*self.popt_x[2]**2)/abs_CS
 
+    def atom_number_px_sum_noise_cancelled(self):
+        abs_CS=(766.5e-9)**2/(2*np.pi)
+        return np.sum(self.blob-0.5*(self.popt_x[3]+self.popt_y[3]))*self.DISTANCE_SCALE**2/abs_CS
+    
     def atom_number_px_sum(self):
         abs_CS=3*(766.5e-9)**2/(2*np.pi)
         return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS 
-        
+    
     def plot_blob(self):
         fig, ax = plt.subplots()
 
@@ -272,12 +288,15 @@ class DataRun:
         ax.add_artist(rect1)
         ax.add_artist(rect2)
         im = ax.imshow(self.od_arr)
+        
         fig.colorbar(im)
+        fig.set_dpi(200)
 
     def plot_fit(self):
 
         fig = plt.figure(
-            figsize=(6,6)
+            figsize=(6,6),
+            dpi = 200
         )
         gs = fig.add_gridspec(
             2, 2,  
@@ -287,30 +306,45 @@ class DataRun:
         )
         ax = fig.add_subplot(gs[1,0])
 
-        ax.imshow(self.blob)
+        ax.imshow(self.blob, extent = (0, max(self.xaxis), 0, max(self.yaxis)))
 
         ax_x = fig.add_subplot(gs[0,0], sharex=ax)
         ax_y = fig.add_subplot(gs[1,1], sharey=ax)
 
-        ax_x.plot(self.xaxis, self.x)
+        ax_x.plot(self.xaxis, self.x, color="r")
         ax_x.plot(
             self.xaxis,
-            self.gaussian_fit(self.xaxis,*self.popt_x)
+            self.gaussian_fit(self.xaxis, *self.popt_x),
+            color = "b"
         )
+        ax_x.set_ylabel("OD (dim.)")
+        plt.setp(ax_x.get_xticklabels(), visible = False)
 
         #flip the axes for y
-        ax_y.plot(self.y, self.yaxis) 
+        ax_y.plot(self.y, self.yaxis, color = "r") 
         ax_y.plot(
             self.gaussian_fit(self.yaxis, *self.popt_y),
             self.yaxis,
+            color = "b"
         )
+        ax_y.set_xlabel("OD (dim.)")
+        plt.setp(ax_y.get_yticklabels(), visible = False)
 
         ax.errorbar(
             self.popt_x[1], 
             self.popt_y[1], 
             xerr = np.abs(self.popt_x[2]), 
             yerr = np.abs(self.popt_y[2]), 
-            color = 'r', 
+            color = "r", 
             marker = "x", 
             capsize = 10
         )
+
+        def tick_format(val, num):
+            return "{:.2f}".format(val * 1e3)
+
+        ax.xaxis.set_major_formatter(tick_format)
+        ax.yaxis.set_major_formatter(tick_format)
+
+        ax.set_xlabel(r"$x \ (mm)$")
+        ax.set_ylabel(r"$y \ (mm)$")
