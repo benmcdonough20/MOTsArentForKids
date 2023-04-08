@@ -233,7 +233,7 @@ class DataRun:
     def atom_number(self):
         x = np.arange(-10*self.popt_x[2], 10*self.popt_x[2], self.DISTANCE_SCALE/20)
 
-        abs_CS = 3*(766.5e-9)**2/(2*np.pi)
+        abs_CS = (766.5e-9)**2/(2*np.pi)
         #of magnitude smaller
         return np.trapz(
             self.gaussian_fit(x, *self.popt_x[:3], 0),
@@ -241,7 +241,7 @@ class DataRun:
         )*self.DISTANCE_SCALE/abs_CS
 
     def atom_number_px_sum(self):
-        abs_CS=3*(766.5e-9)**2/(2*np.pi)
+        abs_CS=(766.5e-9)**2/(2*np.pi)
         return np.sum(self.blob)*self.DISTANCE_SCALE**2/abs_CS 
         
     def plot_blob(self):

@@ -213,7 +213,7 @@ class DataRun:
         return
 
     def gaussian_fit(self, x, A, mu, sigma, B):
-        return A*np.exp(-(x-mu)**2/(2*sigma**2))
+        return A*np.exp(-(x-mu)**2/(2*sigma**2))+B
     
     def fit(self):
         #compute marginals and fit to a gaussian
