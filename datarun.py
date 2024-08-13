@@ -271,7 +271,11 @@ class DataRun:
 
         ax.add_artist(rect1)
         ax.add_artist(rect2)
-        im = ax.imshow(self.od_arr)
+
+
+        im = ax.imshow(self.od_arr, extent = [0, len(self.od_arr[0])*self.DISTANCE_SCALE*1000, 0, len(self.od_arr)*self.DISTANCE_SCALE*1000])
+        ax.set_xlabel("z (mm)")
+        ax.set_ylabel("y (mm)")
         fig.colorbar(im)
 
     def plot_fit(self):
@@ -283,27 +287,33 @@ class DataRun:
             2, 2,  
             width_ratios=(4, 1), height_ratios=(1, 4),
             left=0.1, right=0.9, bottom=0.1, top=0.9,
-            wspace=0.05, hspace=0.05
+            wspace=0.3, hspace=0.3
         )
         ax = fig.add_subplot(gs[1,0])
 
-        ax.imshow(self.blob)
+        ax.imshow(self.blob, extent=[0, max(self.xaxis), 0, max(self.yaxis)])
 
         ax_x = fig.add_subplot(gs[0,0], sharex=ax)
         ax_y = fig.add_subplot(gs[1,1], sharey=ax)
 
-        ax_x.plot(self.xaxis, self.x)
+
+        ax_x.plot(self.xaxis*1000, self.x, color = "red")
         ax_x.plot(
-            self.xaxis,
-            self.gaussian_fit(self.xaxis,*self.popt_x)
+            self.xaxis*1000,
+            self.gaussian_fit(self.xaxis,*self.popt_x),
+            color = "blue"
         )
 
         #flip the axes for y
-        ax_y.plot(self.y, self.yaxis) 
+        ax_y.plot(self.y, self.yaxis*1000, color = "red") 
         ax_y.plot(
             self.gaussian_fit(self.yaxis, *self.popt_y),
-            self.yaxis,
+            self.yaxis*1000,
+            color = "blue"
         )
+
+        ax.set_xlabel("z (mm)")
+        ax.set_ylabel("y (mm)")
 
         ax.errorbar(
             self.popt_x[1], 
